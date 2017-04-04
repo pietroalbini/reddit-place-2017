@@ -265,23 +265,25 @@ def main():
     if args.timestamps is not None:
         canvas = FastLoadCanvas(args.area, args.pixel_size)
 
-        missing_timestamps = args.timestamps[:]
+        remaining = list(sorted(args.timestamps))
         for timestamp in load_diff(args.diff, canvas):
+            # Check if a previous frame was missing
+            if timestamp > remaining[0]:
+                print("Error: timestamp not found: %s" % remaining[0])
+                exit(1)
+
             # Filter out unwanted frames
-            if timestamp not in missing_timestamps:
+            if timestamp not in remaining:
                 continue
-            missing_timestamps.remove(timestamp)
+            remaining.remove(timestamp)
 
             path = "%s/%s.%s" % (args.output, timestamp, args.format)
             print("Storing %s" % path)
             canvas.save(path)
 
             # Got all the needed frames
-            if not missing_timestamps:
+            if not remaining:
                 break
-
-        for timestamp in missing_timestamps:
-            print("Timestamp not found: %s" % timestamp)
 
     if args.interval is not None:
         canvas = FastSaveCanvas(args.area, args.pixel_size)
