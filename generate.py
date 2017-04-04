@@ -85,7 +85,7 @@ class BaseCanvas:
         x = x - self.start[0]
         y = y - self.start[1]
 
-        self._pixels[x][y] = color
+        self._pixels[y][x] = color
 
         self.after_set(x, y, color)
 
@@ -103,8 +103,8 @@ class FastLoadCanvas(BaseCanvas):
             (self.size_x * self.pixel_size, self.size_y * self.pixel_size)
         )
 
-        for x, pixels in enumerate(self._pixels):
-            for y, color in enumerate(pixels):
+        for y, pixels in enumerate(self._pixels):
+            for x, color in enumerate(pixels):
                 for px in range(self.pixel_size):
                     for py in range(self.pixel_size):
                         img.putpixel((
