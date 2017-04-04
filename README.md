@@ -97,6 +97,13 @@ square of the bottom right corner (The Blue Corner) you can use:
 $ python3 generate.py data/diff.gz --area 800,800:999,999 --latest
 ```
 
+There is also the `--pixel-size` flag to generate an higher resolution image.
+For example, if you want to double the resolution you can use:
+
+```
+$ python3 generate.py data/diff.gz --pixel-size 2 --latest
+```
+
 [rplace]: https://www.reddit.com/r/place
 [umncke]: https://www.reddit.com/u/mncke
 [data]: https://www.reddit.com/r/place/comments/6396u5/rplace_archive_update/

@@ -61,12 +61,14 @@ BLACKLISTED_TIMESTAMPS = [
 class BaseCanvas:
     """Code shared by both FastLoadCanvas and FastSaveCanvas"""
 
-    def __init__(self, area):
+    def __init__(self, area, pixel_size):
         self.start = area[0]
         self.end = area[1]
 
         self.size_x = self.end[0] - self.start[0] + 1
         self.size_y = self.end[1] - self.start[1] + 1
+
+        self.pixel_size = pixel_size
 
         self._pixels = [
             [0 for i in range(self.size_x)] for i in range(self.size_y)
@@ -97,11 +99,18 @@ class FastLoadCanvas(BaseCanvas):
 
     def save(self, dest):
         """Convert the canvas to a .png file"""
-        img = Image.new("RGB", (self.size_x, self.size_y))
+        img = Image.new("RGB",
+            (self.size_x * self.pixel_size, self.size_y * self.pixel_size)
+        )
 
         for x, pixels in enumerate(self._pixels):
             for y, color in enumerate(pixels):
-                img.putpixel((x, y), COLORS[color])
+                for px in range(self.pixel_size):
+                    for py in range(self.pixel_size):
+                        img.putpixel((
+                            x * self.pixel_size + px,
+                            y * self.pixel_size + py,
+                        ), COLORS[color])
 
         img.save(dest)
 
@@ -109,20 +118,29 @@ class FastLoadCanvas(BaseCanvas):
 class FastSaveCanvas(BaseCanvas):
     """Canvas optimized for saving every frame"""
 
-    def __init__(self, area):
-        super().__init__(area)
+    def __init__(self, area, pixel_size):
+        super().__init__(area, pixel_size)
 
-        self._image = Image.new("RGB", (self.size_x, self.size_y))
+        self._image = Image.new("RGB",
+            (self.size_x * self.pixel_size, self.size_y * self.pixel_size)
+        )
 
         draw = ImageDraw.Draw(self._image)
         draw.rectangle(
-            [(0, 0), (self.size_x - 1, self.size_y - 1)],
+            [(0, 0), (
+                self.size_x * self.pixel_size - self.pixel_size,
+                self.size_y * self.pixel_size - self.pixel_size)],
             fill=COLORS[0],
         )
         del draw
 
     def after_set(self, x, y, color):
-        self._image.putpixel((x, y), COLORS[color])
+        for px in range(self.pixel_size):
+            for py in range(self.pixel_size):
+                self._image.putpixel(
+                    (x * self.pixel_size + px, y * self.pixel_size + py),
+                    COLORS[color]
+                )
 
     def save(self, dest):
         """Convert the canvas to a .png file"""
@@ -195,6 +213,8 @@ def main():
     parser.add_argument("-a", "--area", default=((0, 0), (999, 999)),
                         type=format_area, help="The area to capture "
                         "(for example x1,y1:x2,y2)")
+    parser.add_argument("--pixel-size", type=int, default=1, dest="pixel_size",
+                        help="Size of the pixels in the output image")
 
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--interval", type=int,
@@ -211,7 +231,7 @@ def main():
     os.makedirs(args.output, exist_ok=True)
 
     if args.latest:
-        canvas = FastLoadCanvas(args.area)
+        canvas = FastLoadCanvas(args.area, args.pixel_size)
 
         for timestamp in load_diff(args.diff, canvas):
             continue
@@ -221,7 +241,7 @@ def main():
         canvas.save(path)
 
     if args.timestamps is not None:
-        canvas = FastLoadCanvas(args.area)
+        canvas = FastLoadCanvas(args.area, args.pixel_size)
 
         missing_timestamps = args.timestamps[:]
         for timestamp in load_diff(args.diff, canvas):
@@ -242,7 +262,7 @@ def main():
             print("Timestamp not found: %s" % timestamp)
 
     if args.interval is not None:
-        canvas = FastSaveCanvas(args.area)
+        canvas = FastSaveCanvas(args.area, args.pixel_size)
 
         latest_timestamp = -args.interval
         for timestamp in load_diff(args.diff, canvas):
