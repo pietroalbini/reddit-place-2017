@@ -73,6 +73,13 @@ $ python3 generate.py data/diff.gz --timestamp 1491001598
 $ python3 generate.py data/diff.gz --timestamp 1491001598 --timestamp 1491134887
 ```
 
+If you want to get a list of all the available timestamps, you can use the
+`--list-timestamps` flag:
+
+```
+$ python3 generate.py data/diff.gz --list-timestamps
+```
+
 Also, the script supports some flags to customize its behavior. If you want the
 images to be stored in a different directory you can use the `--output-dir`
 flag:

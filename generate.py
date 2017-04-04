@@ -58,6 +58,19 @@ BLACKLISTED_TIMESTAMPS = [
 ]
 
 
+class VoidCanvas:
+    """Canvas that just discards everything"""
+
+    def __init__(self, *args):
+        pass
+
+    def set(self, *args):
+        pass
+
+    def save(self, *args):
+        pass
+
+
 class BaseCanvas:
     """Code shared by both FastLoadCanvas and FastSaveCanvas"""
 
@@ -224,6 +237,9 @@ def main():
                        help="The timestamp you want to save")
     group.add_argument("--latest", action="store_true",
                        help="Return only the latest frame")
+    group.add_argument("--list-timestamps", action="store_true",
+                       dest="list_timestamps",
+                       help="List all the available timestamps")
 
     args = parser.parse_args()
 
@@ -239,6 +255,12 @@ def main():
         path = "%s/latest.%s" % (args.output, args.format)
         print("Storing %s" % path)
         canvas.save(path)
+
+    if args.list_timestamps:
+        canvas = VoidCanvas()
+
+        for timestamp in load_diff(args.diff, canvas):
+            print(timestamp)
 
     if args.timestamps is not None:
         canvas = FastLoadCanvas(args.area, args.pixel_size)
