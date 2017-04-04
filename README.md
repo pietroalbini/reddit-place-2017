@@ -89,6 +89,14 @@ the `--format` flag (you can use all the formats supported by
 $ python3 generate.py data/diff.gz --format gif --latest
 ```
 
+If you want to limit the area you're interested in, you can use the `--area`
+flag, which follows the format `x1,y1:x2,y2`. For example, to get a 200x200
+square of the bottom right corner (The Blue Corner) you can use:
+
+```
+$ python3 generate.py data/diff.gz --area 800,800:999,999 --latest
+```
+
 [rplace]: https://www.reddit.com/r/place
 [umncke]: https://www.reddit.com/u/mncke
 [data]: https://www.reddit.com/r/place/comments/6396u5/rplace_archive_update/

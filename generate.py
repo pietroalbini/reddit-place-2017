@@ -61,12 +61,35 @@ BLACKLISTED_TIMESTAMPS = [
 class BaseCanvas:
     """Code shared by both FastLoadCanvas and FastSaveCanvas"""
 
-    def __init__(self):
-        self._pixels = [[0 for i in range(1000)] for i in range(1000)]
+    def __init__(self, area):
+        self.start = area[0]
+        self.end = area[1]
+
+        self.size_x = self.end[0] - self.start[0] + 1
+        self.size_y = self.end[1] - self.start[1] + 1
+
+        self._pixels = [
+            [0 for i in range(self.size_x)] for i in range(self.size_y)
+        ]
 
     def set(self, x, y, color):
         """Set a new pixel"""
+        # Skip pixels in unwanted areas
+        if x < self.start[0] or x > self.end[0]:
+            return
+        if y < self.start[1] or y > self.end[1]:
+            return
+
+        x = x - self.start[0]
+        y = y - self.start[1]
+
         self._pixels[x][y] = color
+
+        self.after_set(x, y, color)
+
+    def after_set(self, x, y, color):
+        """Used by the subclasses"""
+        pass
 
 
 class FastLoadCanvas(BaseCanvas):
@@ -74,7 +97,7 @@ class FastLoadCanvas(BaseCanvas):
 
     def save(self, dest):
         """Convert the canvas to a .png file"""
-        img = Image.new("RGB", (1000, 1000))
+        img = Image.new("RGB", (self.size_x, self.size_y))
 
         for x, pixels in enumerate(self._pixels):
             for y, color in enumerate(pixels):
@@ -86,19 +109,19 @@ class FastLoadCanvas(BaseCanvas):
 class FastSaveCanvas(BaseCanvas):
     """Canvas optimized for saving every frame"""
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, area):
+        super().__init__(area)
 
-        self._image = Image.new("RGB", (1000, 1000))
+        self._image = Image.new("RGB", (self.size_x, self.size_y))
 
         draw = ImageDraw.Draw(self._image)
-        draw.rectangle([(0, 0), (999, 999)], fill=COLORS[0])
+        draw.rectangle(
+            [(0, 0), (self.size_x - 1, self.size_y - 1)],
+            fill=COLORS[0],
+        )
         del draw
 
-    def set(self, x, y, color):
-        """Set a pixel"""
-        super().set(x, y, color)
-
+    def after_set(self, x, y, color):
         self._image.putpixel((x, y), COLORS[color])
 
     def save(self, dest):
@@ -130,6 +153,35 @@ def load_diff(path, canvas):
             yield latest_timestamp
 
 
+def format_area(input):
+    """Format the area for the CLI"""
+    def error():
+        msg = "The format for the area must be x1,y1:x2,y2 with x and y " \
+              "between 0 and 999"
+        raise argparse.ArgumentTypeError(msg)
+
+    if input.count(":") != 1:
+        error()
+    start, end = input.split(":")
+
+    result = []
+    for part in (start, end):
+        if part.count(",") != 1:
+            error()
+
+        try:
+            x, y = (int(x) for x in part.split(","))
+        except ValueError:
+            error()
+
+        if x < 0 or y < 0 or x > 999 or y > 999:
+            error()
+
+        result.append((x, y))
+
+    return tuple(result)
+
+
 def main():
     """CLI entry point for the program"""
     parser = argparse.ArgumentParser()
@@ -140,6 +192,9 @@ def main():
     parser.add_argument("-f", "--format", default="png",
                         help="The image format you want to use"
                              "(defaults to PNG)")
+    parser.add_argument("-a", "--area", default=((0, 0), (999, 999)),
+                        type=format_area, help="The area to capture "
+                        "(for example x1,y1:x2,y2)")
 
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--interval", type=int,
@@ -156,7 +211,7 @@ def main():
     os.makedirs(args.output, exist_ok=True)
 
     if args.latest:
-        canvas = FastLoadCanvas()
+        canvas = FastLoadCanvas(args.area)
 
         for timestamp in load_diff(args.diff, canvas):
             continue
@@ -166,7 +221,7 @@ def main():
         canvas.save(path)
 
     if args.timestamps is not None:
-        canvas = FastLoadCanvas()
+        canvas = FastLoadCanvas(args.area)
 
         missing_timestamps = args.timestamps[:]
         for timestamp in load_diff(args.diff, canvas):
@@ -187,7 +242,7 @@ def main():
             print("Timestamp not found: %s" % timestamp)
 
     if args.interval is not None:
-        canvas = FastSaveCanvas()
+        canvas = FastSaveCanvas(args.area)
 
         latest_timestamp = -args.interval
         for timestamp in load_diff(args.diff, canvas):
