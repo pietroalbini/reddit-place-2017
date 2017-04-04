@@ -212,7 +212,7 @@ def main():
                              "(defaults to PNG)")
     parser.add_argument("-a", "--area", default=((0, 0), (999, 999)),
                         type=format_area, help="The area to capture "
-                        "(for example 0,0:999,999)")
+                        "(format: x1,y1:x2,y2)")
     parser.add_argument("--pixel-size", type=int, default=1, dest="pixel_size",
                         help="Size of the pixels in the output image")
 
