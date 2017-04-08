@@ -167,6 +167,7 @@ def load_diff(path, canvas):
     else:
         f = open(path, "rb")
 
+    n_changes = 0
     latest_timestamp = None
     while True:
         bytes = f.read(16)
@@ -175,15 +176,20 @@ def load_diff(path, canvas):
 
         timestamp, x, y, color = struct.unpack("<IIII", bytes)
         canvas.set(x, y, color)
-
+        n_changes += 1
+        
         if timestamp in BLACKLISTED_TIMESTAMPS:
             continue
 
         if timestamp != latest_timestamp:
             latest_timestamp = timestamp
             yield latest_timestamp
+            n_changes = 0
 
-
+    if n_changes:
+        yield latest_timestamp
+        
+            
 def format_area(input):
     """Format the area for the CLI"""
     def error():
